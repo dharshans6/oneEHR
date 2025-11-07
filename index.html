@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Left/Right Selector Toggle</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .panels-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+
+    @media (max-width: 768px) {
+      .panels-wrapper {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+    }
+
+    section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    section h2 {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .dot {
+      aspect-ratio: 1;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #333;
+      position: relative;
+    }
+
+    .dot:hover:not(:disabled) {
+      border-color: #667eea;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .dot:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
+    }
+
+    .dot.is-selected {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .dot:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .dot::after {
+      content: attr(data-cost);
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      font-size: 10px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 2px 4px;
+      color: #666;
+    }
+
+    .dot.is-selected::after {
+      background: rgba(255, 255, 255, 0.3);
+      color: white;
+    }
+
+    .summary {
+      font-size: 13px;
+      color: #666;
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      border-left: 3px solid #667eea;
+      min-height: 20px;
+      line-height: 1.4;
+    }
+
+    .summary.empty {
+      color: #999;
+      font-style: italic;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #eee;
+    }
+
+    button#resetAll {
+      padding: 12px 24px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button#resetAll:hover {
+      background: #d32f2f;
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+    }
+
+    button#resetAll:active {
+      transform: scale(0.98);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #f44336;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      font-size: 14px;
+      animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s;
+      z-index: 1000;
+      max-width: 300px;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Selection Tracker</h1>
+      <p>Toggle dots to select items with budget constraints</p>
+    </div>
+
+    <div class="panels-wrapper">
+      <section id="left" aria-label="Left Panel">
+        <h2>Left</h2>
+        <div class="grid">
+          <button class="dot" data-id="L1" data-side="left" data-cost="2">L1</button>
+          <button class="dot" data-id="L2" data-side="left" data-cost="2">L2</button>
+          <button class="dot" data-id="L3" data-side="left" data-cost="1">L3</button>
+          <button class="dot" data-id="L4" data-side="left" data-cost="1">L4</button>
+          <button class="dot" data-id="L5" data-side="left" data-cost="1">L5</button>
+          <button class="dot" data-id="L6" data-side="left" data-cost="2">L6</button>
+        </div>
+        <p class="summary empty" aria-live="polite">No items selected (0/4)</p>
+      </section>
+
+      <section id="right" aria-label="Right Panel">
+        <h2>Right</h2>
+        <div class="grid">
+          <button class="dot" data-id="R1" data-side="right" data-cost="2">R1</button>
+          <button class="dot" data-id="R2" data-side="right" data-cost="2">R2</button>
+          <button class="dot" data-id="R3" data-side="right" data-cost="1">R3</button>
+          <button class="dot" data-id="R4" data-side="right" data-cost="1">R4</button>
+          <button class="dot" data-id="R5" data-side="right" data-cost="1">R5</button>
+          <button class="dot" data-id="R6" data-side="right" data-cost="2">R6</button>
+        </div>
+        <p class="summary empty" aria-live="polite">No items selected (0/4)</p>
+      </section>
+    </div>
+
+    <div class="controls">
+      <button id="resetAll">Reset All</button>
+    </div>
+  </div>
+
+  <div id="toast" aria-live="polite" aria-atomic="true" class="visually-hidden"></div>
+
+
+  <script>
+
+    const STORAGE_KEY = 'selector-state';
+    const BUDGET_PER_SIDE = 4;
+
+   const MUTEX = {
+  left: [
+    ['L1', 'L2'],
+    ['L3', 'L4'],
+    ['L5', 'L6']
+  ],
+  right: [
+    ['R1', 'R2'],
+    ['R3', 'R4'],
+    ['R5', 'R6']
+  ]
+};
+
+
+    const state = {
+      selections: { left: new Set(), right: new Set() },
+      budget: { left: BUDGET_PER_SIDE, right: BUDGET_PER_SIDE }
+    };
+
+
+    function getCost(id) {
+      const button = document.querySelector(`[data-id="${id}"]`);
+      return parseInt(button?.getAttribute('data-cost') || 0, 10);
+    }
+
+    function getSide(id) {
+      const button = document.querySelector(`[data-id="${id}"]`);
+      return button?.getAttribute('data-side') || null;
+    }
+
+    function calculateTotalCost(side) {
+      return Array.from(state.selections[side]).reduce((sum, id) => sum + getCost(id), 0);
+    }
+
+ function showToast(message) {
+  const toastElement = document.getElementById('toast');
+
+  toastElement.innerHTML = ''; 
+
+  const visualToast = document.createElement('div');
+  visualToast.className = 'toast';
+  visualToast.textContent = message;
+  visualToast.setAttribute('role', 'status');
+  visualToast.setAttribute('aria-live', 'assertive');
+  document.body.appendChild(visualToast);
+
+  setTimeout(() => {
+    visualToast.remove();
+  }, 3000);
+}
+
+    function getMutexPair(id) {
+      const side = getSide(id);
+      if (!side || !MUTEX[side]) return null;
+
+      for (const pair of MUTEX[side]) {
+        if (pair.includes(id)) return pair.find(item => item !== id);
+      }
+      return null;
+    }
+
+    function updateSummary(side) {
+      const summary = document.querySelector(`#${side} .summary`);
+      const selections = Array.from(state.selections[side]).sort();
+      const totalCost = calculateTotalCost(side);
+
+      if (selections.length === 0) {
+        summary.textContent = `No items selected (0/${BUDGET_PER_SIDE})`;
+        summary.classList.add('empty');
+      } else {
+        summary.textContent = `Selected: ${selections.join(', ')} (cost ${totalCost}/${BUDGET_PER_SIDE})`;
+        summary.classList.remove('empty');
+      }
+    }
+
+    function updateDOM(id, side) {
+      const button = document.querySelector(`[data-id="${id}"]`);
+      const isSelected = state.selections[side].has(id);
+      button.classList.toggle('is-selected', isSelected);
+      button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        selections: {
+          left: Array.from(state.selections.left),
+          right: Array.from(state.selections.right)
+        }
+      }));
+    }
+
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          state.selections.left = new Set(data.selections.left);
+          state.selections.right = new Set(data.selections.right);
+          return true;
+        } catch (e) {
+          console.error('Failed to parse saved state:', e);
+        }
+      }
+      return false;
+    }
+
+ 
+
+
+function toggle(id, side) {
+  const cost = getCost(id);
+  const isSelected = state.selections[side].has(id);
+
+  if (isSelected) {
+    state.selections[side].delete(id);
+    updateDOM(id, side);
+    updateSummary(side);
+    saveToLocalStorage();
+    return;
+  }
+
+  const total = calculateTotalCost(side);
+  if (total + cost > BUDGET_PER_SIDE) {
+    showToast(`Over budget on ${side}! (${total + cost}/${BUDGET_PER_SIDE})`);
+    return;
+  }
+
+  const mutexPair = getMutexPair(id);
+  if (mutexPair && state.selections[side].has(mutexPair)) {
+    state.selections[side].delete(mutexPair);
+    updateDOM(mutexPair, side);
+  }
+
+  const oppositeSide = side === 'left' ? 'right' : 'left';
+  let oppositeId = "";
+  if (id.startsWith("L")) {
+    oppositeId = id.replace("L", "R");
+  } else if (id.startsWith("R")) {
+    oppositeId = id.replace("R", "L");
+  }
+
+  if (state.selections[oppositeSide].has(oppositeId)) {
+    state.selections[oppositeSide].delete(oppositeId);
+    updateDOM(oppositeId, oppositeSide);
+    updateSummary(oppositeSide);
+  }
+
+  state.selections[side].add(id);
+  updateDOM(id, side);
+  updateSummary(side);
+  saveToLocalStorage();
+}
+
+   
+
+    function init() {
+      loadFromLocalStorage();
+
+      document.querySelectorAll('.dot').forEach(btn => {
+        const id = btn.getAttribute('data-id');
+        const side = btn.getAttribute('data-side');
+        const isSelected = state.selections[side].has(id);
+
+        btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        if (isSelected) btn.classList.add('is-selected');
+
+        btn.addEventListener('click', () => toggle(id, side));
+        btn.addEventListener('keydown', e => {
+          if (['Enter', ' '].includes(e.key)) {
+            e.preventDefault();
+            toggle(id, side);
+          }
+        });
+      });
+
+      document.getElementById('resetAll').addEventListener('click', () => {
+        state.selections.left.clear();
+        state.selections.right.clear();
+        localStorage.removeItem(STORAGE_KEY);
+        document.querySelectorAll('.dot').forEach(btn => {
+          btn.classList.remove('is-selected');
+          btn.setAttribute('aria-pressed', 'false');
+        });
+        updateSummary('left');
+        updateSummary('right');
+        showToast('All selections cleared!');
+      });
+
+      updateSummary('left');
+      updateSummary('right');
+    }
+
+    document.readyState === 'loading'
+      ? document.addEventListener('DOMContentLoaded', init)
+      : init();
+  </script>
+</body>
+</html>
